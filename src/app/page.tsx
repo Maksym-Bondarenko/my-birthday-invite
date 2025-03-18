@@ -1,5 +1,8 @@
 "use client";
 
+import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/next"
+
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Howl } from "howler";
@@ -7,21 +10,127 @@ import confetti from "canvas-confetti";
 import "./globals.css";
 import { ChangeEvent, FormEvent } from "react";
 
+// Extend Window interface to include our sound properties
+declare global {
+  interface Window {
+    hoverSound?: Howl;
+    clickSound?: Howl;
+    successSound?: Howl;
+  }
+}
+
 const photoPaths = Array.from({ length: 50 }, (_, i) => `/images/photo_${i + 1}.jpg`);
 
-const soundEffect = new Howl({ src: ["https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.wav"] });
-const hoverEffect = new Howl({ src: ["https://assets.mixkit.co/sfx/preview/mixkit-video-game-retro-click-237.wav"] });
-const linkClickEffect = new Howl({ src: ["https://assets.mixkit.co/sfx/preview/mixkit-classic-click-1117.wav"] });
+// Sound effects configuration
+const SOUND_URLS = {
+  hover: "https://assets.mixkit.co/sfx/preview/mixkit-video-game-retro-click-237.wav",
+  click: "https://assets.mixkit.co/sfx/preview/mixkit-classic-click-1117.wav",
+  success: "https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.wav"
+};
+
+// Animation helper functions
+const createSparkles = () => {
+  confetti({
+    particleCount: 15,
+    spread: 30,
+    origin: { y: 0.8 },
+    colors: ['#FFD700', '#FFA500', '#FF69B4'],
+    gravity: 0.5,
+    scalar: 0.7,
+    ticks: 50
+  });
+};
+
+const createMiniConfetti = (event: React.MouseEvent) => {
+  const rect = (event.target as HTMLElement).getBoundingClientRect();
+  const x = (rect.left + rect.width / 2) / window.innerWidth;
+  const y = (rect.top + rect.height / 2) / window.innerHeight;
+  
+  confetti({
+    particleCount: 8,
+    spread: 20,
+    origin: { x, y },
+    colors: ['#FFD700', '#FFA500', '#FF69B4'],
+    gravity: 0.3,
+    scalar: 0.5,
+    ticks: 30
+  });
+};
 
 export default function Home() {
-  const [formData, setFormData] = useState({ name: "", guests: "", diet: "meat", drinks: [] as string[], funFact: "" });
+  const [formData, setFormData] = useState({ 
+    name: "", 
+    guests: "", 
+    diet: "meat", 
+    drinks: [] as string[], 
+    funFact: "",
+    arrivalTime: "14:00" // Default to party start time
+  });
   const [currentPhoto, setCurrentPhoto] = useState(photoPaths[0]);
   const [hypeLevel, setHypeLevel] = useState(0);
   const [countdown, setCountdown] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [soundsLoaded, setSoundsLoaded] = useState(false);
 
-  const playHoverSound = () => hoverEffect.play();
-  const playClickSound = () => linkClickEffect.play();
+  // Initialize sound effects
+  useEffect(() => {
+    // Only initialize sounds after component mounts (client-side)
+    const hoverSound = new Howl({
+      src: [SOUND_URLS.hover],
+      preload: true,
+      volume: 0.5
+    });
+
+    const clickSound = new Howl({
+      src: [SOUND_URLS.click],
+      preload: true,
+      volume: 0.5
+    });
+
+    const successSound = new Howl({
+      src: [SOUND_URLS.success],
+      preload: true,
+      volume: 0.7
+    });
+
+    // Wait for all sounds to load
+    Promise.all([
+      new Promise(resolve => hoverSound.once('load', resolve)),
+      new Promise(resolve => clickSound.once('load', resolve)),
+      new Promise(resolve => successSound.once('load', resolve))
+    ]).then(() => {
+      setSoundsLoaded(true);
+      window.hoverSound = hoverSound;
+      window.clickSound = clickSound;
+      window.successSound = successSound;
+    });
+
+    return () => {
+      // Cleanup sounds on unmount
+      hoverSound.unload();
+      clickSound.unload();
+      successSound.unload();
+    };
+  }, []);
+
+  // Sound effect functions
+  const playHoverSound = () => {
+    if (typeof window !== 'undefined' && window.hoverSound) {
+      window.hoverSound.play();
+    }
+  };
+
+  const playClickSound = () => {
+    if (typeof window !== 'undefined' && window.clickSound) {
+      window.clickSound.play();
+    }
+  };
+
+  const playSuccessSound = () => {
+    if (typeof window !== 'undefined' && window.successSound) {
+      window.successSound.play();
+    }
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -49,7 +158,7 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -57,7 +166,7 @@ export default function Home() {
     e.preventDefault();
     setHypeLevel(Number(formData.guests) * 10);
     setSubmitted(true);
-    soundEffect.play();
+    playSuccessSound();
     confetti({ particleCount: 300, spread: 150, origin: { y: 0.6 } });
     
     try {
@@ -82,243 +191,295 @@ export default function Home() {
     }
   };
 
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 text-white p-6">
-      <motion.h1 
-        initial={{ opacity: 0, y: -50 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        transition={{ duration: 1.5 }}
-        className="text-5xl font-bold mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-yellow-200 to-pink-400 drop-shadow-lg"
-        onMouseEnter={playHoverSound}
-      >
-        🎂 You're Invited to My Birthday Party! 🎉
-      </motion.h1>
-      <motion.h2 
-        className="text-2xl font-semibold bg-black/50 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-white/20"
-        initial={{ opacity: 0, scale: 0.9 }} 
-        animate={{ opacity: 1, scale: 1 }} 
-        transition={{ duration: 1.5, delay: 0.5 }}
-        onMouseEnter={playHoverSound}
-      >
-        ⏳ Countdown: {countdown}
-      </motion.h2>
-      <motion.img 
-        src={currentPhoto} 
-        alt="Random Photo" 
-        className="w-48 h-48 rounded-full border-4 border-white/30 shadow-2xl mb-6 hover:scale-110 transition-transform duration-300"
-        animate={{ 
-          rotate: 360, 
-          scale: [1, 1.1, 1],
-          boxShadow: ["0 0 0 0 rgba(255,255,255,0.3)", "0 0 20px 10px rgba(255,255,255,0.5)", "0 0 0 0 rgba(255,255,255,0.3)"]
-        }} 
-        transition={{ 
-          duration: 3, 
-          repeat: Infinity, 
-          ease: "linear",
-          boxShadow: { duration: 2, repeat: Infinity }
-        }}
-        onMouseEnter={playHoverSound}
-      />
-      <motion.div 
-        className="w-full max-w-lg bg-white/90 backdrop-blur-sm text-black rounded-2xl p-8 shadow-2xl border border-white/20"
-        initial={{ opacity: 0, scale: 0.9, y: 20 }} 
-        animate={{ opacity: 1, scale: 1, y: 0 }} 
-        transition={{ duration: 1, delay: 0.8 }}
-      >
-        <h2 className="text-3xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600"
-          onMouseEnter={playHoverSound}>
-          RSVP Here
-        </h2>
-        <form 
-          action="https://formsubmit.co/max.druppy@gmail.com" 
-          method="POST" 
-          onSubmit={handleSubmit} 
-          className="flex flex-col gap-6"
-        >
-          <motion.input 
-            type="text" 
-            name="name" 
-            placeholder="Your Name" 
-            value={formData.name} 
-            onChange={handleChange} 
-            className="p-3 border-2 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300" 
-            required 
-            whileFocus={{ scale: 1.02 }}
-            onMouseEnter={playHoverSound}
-          />
-          <motion.input 
-            type="number" 
-            name="guests" 
-            placeholder="Number of Guests" 
-            value={formData.guests} 
-            onChange={handleChange} 
-            className="p-3 border-2 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300" 
-            required 
-            whileFocus={{ scale: 1.02 }}
-            onMouseEnter={playHoverSound}
-          />
-          <fieldset className="space-y-2">
-            <legend className="text-lg font-semibold mb-2" onMouseEnter={playHoverSound}>Preferred Meal:</legend>
-            <div className="flex gap-4">
-              {['meat', 'fish', 'vegan'].map((diet) => (
-                <motion.label 
-                  key={diet} 
-                  className="flex items-center gap-2 cursor-pointer hover:text-purple-600 transition-colors"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onMouseEnter={playHoverSound}
-                  onClick={playClickSound}
-                >
-                  <input 
-                    type="radio" 
-                    name="diet" 
-                    value={diet} 
-                    checked={formData.diet === diet} 
-                    onChange={handleChange}
-                    className="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                  /> 
-                  {diet.charAt(0).toUpperCase() + diet.slice(1)}
-                </motion.label>
-              ))}
-            </div>
-          </fieldset>
-          <fieldset className="space-y-2">
-            <legend className="text-lg font-semibold mb-2" onMouseEnter={playHoverSound}>Preferred Beverage:</legend>
-            <div className="grid grid-cols-2 gap-4">
-              {['non-alco', 'beer', 'wine/liquer/coctails', 'else'].map((drink) => (
-                <motion.label 
-                  key={drink} 
-                  className="flex items-center gap-2 cursor-pointer hover:text-purple-600 transition-colors"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onMouseEnter={playHoverSound}
-                  onClick={playClickSound}
-                >
-                  <input 
-                    type="checkbox" 
-                    name="drinks" 
-                    value={drink} 
-                    checked={formData.drinks.includes(drink)} 
-                    onChange={(e) => {
-                      const newDrinks = e.target.checked 
-                        ? [...formData.drinks, drink]
-                        : formData.drinks.filter(d => d !== drink);
-                      setFormData({ ...formData, drinks: newDrinks });
-                    }}
-                    className="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                  /> 
-                  {drink.charAt(0).toUpperCase() + drink.slice(1)}
-                </motion.label>
-              ))}
-            </div>
-          </fieldset>
-          <motion.input 
-            type="text" 
-            name="funFact" 
-            placeholder="Your Fun Fact" 
-            value={formData.funFact} 
-            onChange={handleChange} 
-            className="p-3 border-2 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300" 
-            required 
-            whileFocus={{ scale: 1.02 }}
-            onMouseEnter={playHoverSound}
-          />
-          <motion.button 
-            type="submit" 
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white p-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onMouseEnter={playHoverSound}
-            onClick={playClickSound}
-          >
-            Submit RSVP
-          </motion.button>
-        </form>
-      </motion.div>
+  const handleHover = (event: React.MouseEvent) => {
+    playHoverSound();
+    createSparkles();
+  };
 
-      <motion.div 
-        className="w-full max-w-lg mt-8 bg-white/90 backdrop-blur-sm text-black rounded-2xl p-8 shadow-2xl border border-white/20"
-        initial={{ opacity: 0, scale: 0.9, y: 20 }} 
-        animate={{ opacity: 1, scale: 1, y: 0 }} 
-        transition={{ duration: 1, delay: 1 }}
-      >
-        <h2 className="text-2xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600"
-          onMouseEnter={playHoverSound}>
-          Useful Links
-        </h2>
-        <ul className="space-y-4">
-          <motion.li 
-            whileHover={{ scale: 1.02 }}
-            onMouseEnter={playHoverSound}
+  const handleClick = (event: React.MouseEvent) => {
+    playClickSound();
+    createMiniConfetti(event);
+  };
+
+  return (
+    <>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 text-white p-6">
+        <motion.h1 
+          initial={{ opacity: 0, y: -50 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 1.5 }}
+          className="text-5xl font-bold mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-yellow-200 to-pink-400 drop-shadow-lg"
+          onMouseEnter={handleHover}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          🎂 You're Invited to My Birthday Party! 🎉
+        </motion.h1>
+        <motion.h2 
+          className="text-2xl font-semibold bg-black/50 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-white/20"
+          initial={{ opacity: 0, scale: 0.9 }} 
+          animate={{ opacity: 1, scale: 1 }} 
+          transition={{ duration: 1.5, delay: 0.5 }}
+          onMouseEnter={handleHover}
+        >
+          ⏳ Countdown: {countdown}
+        </motion.h2>
+        <motion.img 
+          src={currentPhoto} 
+          alt="Random Photo" 
+          className="w-64 h-64 rounded-full border-4 border-white/30 shadow-2xl mb-6 hover:scale-110 transition-transform duration-500"
+          animate={{ 
+            rotate: 0, 
+            scale: [1, 1.1, 1],
+            boxShadow: ["0 0 0 0 rgba(255,255,255,0.3)", "0 0 20px 10px rgba(255,255,255,0.5)", "0 0 0 0 rgba(255,255,255,0.3)"]
+          }} 
+          transition={{ 
+            duration: 3, 
+            repeat: Infinity, 
+            ease: "linear",
+            boxShadow: { duration: 2, repeat: Infinity }
+          }}
+          onMouseEnter={handleHover}
+        />
+        <motion.div 
+          className="w-full max-w-lg bg-white/90 backdrop-blur-sm text-black rounded-2xl p-8 shadow-2xl border border-white/20"
+          initial={{ opacity: 0, scale: 0.9, y: 20 }} 
+          animate={{ opacity: 1, scale: 1, y: 0 }} 
+          transition={{ duration: 1, delay: 0.8 }}
+        >
+          <h2 className="text-3xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600"
+            onMouseEnter={handleHover}>
+            RSVP Here
+          </h2>
+          <form 
+            action="https://formsubmit.co/max.druppy@gmail.com" 
+            method="POST" 
+            onSubmit={handleSubmit} 
+            className="flex flex-col gap-6"
           >
-            <a 
-              href="https://maps.app.goo.gl/vUcwL9DXNeLvsvht6" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-purple-600 hover:text-purple-800 transition-colors"
-              onClick={playClickSound}
+            <motion.input 
+              type="text" 
+              name="name" 
+              placeholder="Your Name" 
+              value={formData.name} 
+              onChange={handleChange} 
+              className="p-3 border-2 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300" 
+              required 
+              whileFocus={{ scale: 1.02 }}
+              onMouseEnter={handleHover}
+            />
+            <motion.input 
+              type="number" 
+              name="guests" 
+              placeholder="Number of Guests" 
+              value={formData.guests} 
+              onChange={handleChange} 
+              className="p-3 border-2 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300" 
+              required 
+              whileFocus={{ scale: 1.02 }}
+              onMouseEnter={handleHover}
+            />
+            <fieldset className="space-y-2">
+              <legend className="text-lg font-semibold mb-2" onMouseEnter={handleHover}>Preferred Meal:</legend>
+              <div className="flex gap-4">
+                {['meat', 'fish', 'vegan'].map((diet) => (
+                  <motion.label 
+                    key={diet} 
+                    className="flex items-center gap-2 cursor-pointer hover:text-purple-600 transition-colors"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onMouseEnter={handleHover}
+                    onClick={handleClick}
+                  >
+                    <input 
+                      type="radio" 
+                      name="diet" 
+                      value={diet} 
+                      checked={formData.diet === diet} 
+                      onChange={handleChange}
+                      className="w-4 h-4 text-purple-600 focus:ring-purple-500"
+                    /> 
+                    {diet.charAt(0).toUpperCase() + diet.slice(1)}
+                  </motion.label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset className="space-y-2">
+              <legend className="text-lg font-semibold mb-2" onMouseEnter={handleHover}>Preferred Beverage:</legend>
+              <div className="grid grid-cols-2 gap-4">
+                {['non-alco', 'beer', 'wine/liquer/coctails', 'else'].map((drink) => (
+                  <motion.label 
+                    key={drink} 
+                    className="flex items-center gap-2 cursor-pointer hover:text-purple-600 transition-colors"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onMouseEnter={handleHover}
+                    onClick={handleClick}
+                  >
+                    <input 
+                      type="checkbox" 
+                      name="drinks" 
+                      value={drink} 
+                      checked={formData.drinks.includes(drink)} 
+                      onChange={(e) => {
+                        const newDrinks = e.target.checked 
+                          ? [...formData.drinks, drink]
+                          : formData.drinks.filter(d => d !== drink);
+                        setFormData({ ...formData, drinks: newDrinks });
+                      }}
+                      className="w-4 h-4 text-purple-600 focus:ring-purple-500"
+                    /> 
+                    {drink.charAt(0).toUpperCase() + drink.slice(1)}
+                  </motion.label>
+                ))}
+              </div>
+            </fieldset>
+            <div className="space-y-2">
+              <label className="text-lg font-semibold block" onMouseEnter={handleHover}>
+                Time of Arrival:
+              </label>
+              <motion.input 
+                type="time" 
+                name="arrivalTime" 
+                value={formData.arrivalTime}
+                onChange={handleChange}
+                min="14:00"
+                max="23:00"
+                className="w-full p-3 border-2 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300 text-gray-700" 
+                required 
+                whileFocus={{ scale: 1.02 }}
+                onMouseEnter={handleHover}
+              />
+              <p className="text-sm text-gray-600 mt-1">Party starts at 14:00</p>
+            </div>
+            <motion.input 
+              type="text" 
+              name="funFact" 
+              placeholder="Your Fun Fact" 
+              value={formData.funFact} 
+              onChange={handleChange} 
+              className="p-3 border-2 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-300" 
+              required 
+              whileFocus={{ scale: 1.02 }}
+              onMouseEnter={handleHover}
+            />
+            <motion.button 
+              type="submit" 
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white p-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+              whileHover={{ 
+                scale: 1.02,
+                boxShadow: "0 0 15px rgba(255,255,255,0.5)"
+              }}
+              whileTap={{ scale: 0.98 }}
+              onMouseEnter={handleHover}
+              onClick={handleClick}
             >
-              📍 Party Location
-            </a>
-          </motion.li>
-          <motion.li 
-            whileHover={{ scale: 1.02 }}
-            onMouseEnter={playHoverSound}
-          >
-            <a 
-              href="https://open.spotify.com/playlist/0O7BRkw348UB22qorXSAO3?si=fsUdkQ8vQBacuA-w7OMI_w&pt=6ef8266ae4768c74c4566ca1241f9627&pi=54BSKKneQtazn" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-purple-600 hover:text-purple-800 transition-colors"
-              onClick={playClickSound}
+              Submit RSVP
+            </motion.button>
+          </form>
+        </motion.div>
+
+        <motion.div 
+          className="w-full max-w-lg mt-8 bg-white/90 backdrop-blur-sm text-black rounded-2xl p-8 shadow-2xl border border-white/20"
+          initial={{ opacity: 0, scale: 0.9, y: 20 }} 
+          animate={{ opacity: 1, scale: 1, y: 0 }} 
+          transition={{ duration: 1, delay: 1 }}
+        >
+          <h2 className="text-2xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600"
+            onMouseEnter={handleHover}>
+            Useful Links
+          </h2>
+          <ul className="space-y-4">
+            <motion.li 
+              whileHover={{ 
+                scale: 1.02,
+                textShadow: "0 0 8px rgba(147,51,234,0.3)"
+              }}
+              onMouseEnter={handleHover}
+              onClick={handleClick}
             >
-              🎵 Party Playlist
-            </a>
-          </motion.li>
-          <motion.li 
-            whileHover={{ scale: 1.02 }}
-            onMouseEnter={playHoverSound}
-          >
-            <a 
-              href="https://drive.google.com/drive/folders/1e2No5NzSNcy24GuHfvMV4f25-tmG52V6?usp=sharing" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-purple-600 hover:text-purple-800 transition-colors"
-              onClick={playClickSound}
+              <a 
+                href="https://maps.app.goo.gl/vUcwL9DXNeLvsvht6" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-purple-600 hover:text-purple-800 transition-colors"
+              >
+                📍 Party Location
+              </a>
+            </motion.li>
+            <motion.li 
+              whileHover={{ 
+                scale: 1.02,
+                textShadow: "0 0 8px rgba(147,51,234,0.3)"
+              }}
+              onMouseEnter={handleHover}
+              onClick={handleClick}
             >
-              📸 Party Photos
-            </a>
-          </motion.li>
-          <motion.li 
-            whileHover={{ scale: 1.02 }}
-            onMouseEnter={playHoverSound}
-          >
-            <a 
-              href="https://t.me/+mrxjhlZATLBiZDAy" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-purple-600 hover:text-purple-800 transition-colors"
-              onClick={playClickSound}
+              <a 
+                href="https://open.spotify.com/playlist/0O7BRkw348UB22qorXSAO3?si=fsUdkQ8vQBacuA-w7OMI_w&pt=6ef8266ae4768c74c4566ca1241f9627&pi=54BSKKneQtazn" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-purple-600 hover:text-purple-800 transition-colors"
+              >
+                🎵 Party Playlist
+              </a>
+            </motion.li>
+            <motion.li 
+              whileHover={{ 
+                scale: 1.02,
+                textShadow: "0 0 8px rgba(147,51,234,0.3)"
+              }}
+              onMouseEnter={handleHover}
+              onClick={handleClick}
             >
-              💬 Party Chat
-            </a>
-          </motion.li>
-          <motion.li 
-            whileHover={{ scale: 1.02 }}
-            onMouseEnter={playHoverSound}
-          >
-            <a 
-              href="https://docs.google.com/spreadsheets/d/1jV6Q_1kVZw27qNA0AMKgdsQcfdMZXWd5y5BbxB27K7A/edit?gid=0#gid=0" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-purple-600 hover:text-purple-800 transition-colors"
-              onClick={playClickSound}
+              <a 
+                href="https://drive.google.com/drive/folders/1e2No5NzSNcy24GuHfvMV4f25-tmG52V6?usp=sharing" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-purple-600 hover:text-purple-800 transition-colors"
+              >
+                📸 Party Photos
+              </a>
+            </motion.li>
+            <motion.li 
+              whileHover={{ 
+                scale: 1.02,
+                textShadow: "0 0 8px rgba(147,51,234,0.3)"
+              }}
+              onMouseEnter={handleHover}
+              onClick={handleClick}
             >
-              🎁 Birthday Wishlist
-            </a>
-          </motion.li>
-        </ul>
-      </motion.div>
-    </div>
+              <a 
+                href="https://t.me/+mrxjhlZATLBiZDAy" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-purple-600 hover:text-purple-800 transition-colors"
+              >
+                💬 Party Chat
+              </a>
+            </motion.li>
+            <motion.li 
+              whileHover={{ 
+                scale: 1.02,
+                textShadow: "0 0 8px rgba(147,51,234,0.3)"
+              }}
+              onMouseEnter={handleHover}
+              onClick={handleClick}
+            >
+              <a 
+                href="https://docs.google.com/spreadsheets/d/1jV6Q_1kVZw27qNA0AMKgdsQcfdMZXWd5y5BbxB27K7A/edit?gid=0#gid=0" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-purple-600 hover:text-purple-800 transition-colors"
+              >
+                🎁 Birthday Wishlist
+              </a>
+            </motion.li>
+          </ul>
+        </motion.div>
+      </div>
+      <Analytics />
+      <SpeedInsights />
+    </>
   );
 }
