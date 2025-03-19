@@ -1,36 +1,126 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎂 My Birthday Invitation Website
 
-## Getting Started
+A modern, interactive birthday invitation website built with Next.js, featuring beautiful animations, sound effects, and a Tinder-like photo gallery.
 
-First, run the development server:
+## ✨ Features
 
+- 🎨 **Beautiful Design**
+  - Gradient backgrounds
+  - Glassmorphic UI elements
+  - Smooth animations and transitions
+  - Responsive layout for all devices
+
+- 🎵 **Interactive Elements**
+  - Hover and click sound effects
+  - Confetti animations
+  - Sparkle effects
+  - Click-to-grow photo frame
+
+- 📸 **Photo Gallery**
+  - Tinder-like swipe interface
+  - Grid view of all photos
+  - Full-screen photo viewer
+  - Smooth transitions
+
+- 📝 **RSVP Form**
+  - Guest information collection
+  - Dietary preferences
+  - Beverage preferences
+  - Arrival time selection
+  - Fun fact sharing
+
+- ⏰ **Countdown Timer**
+  - Real-time countdown to the party
+  - Dynamic updates
+  - Beautiful display
+
+- 🔗 **Useful Links**
+  - Party location
+  - Spotify playlist
+  - Telegram chat
+  - Birthday wishlist
+
+## 🚀 Getting Started
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/yourusername/my-birthday-invite.git
+cd my-birthday-invite
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Run the development server:
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-## Learn More
+## 🛠️ Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+- **Framework**: Next.js 14
+- **Styling**: Tailwind CSS
+- **Animations**: Framer Motion
+- **Sound Effects**: Howler.js
+- **Confetti**: canvas-confetti
+- **Photo Swipe**: react-tinder-card
+- **Analytics**: Vercel Analytics
+- **Performance**: Vercel Speed Insights
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📁 Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+my-birthday-invite/
+├── src/
+│   └── app/
+│       ├── page.tsx            # Main invitation page (root route)
+│       ├── photos/
+│       │   └── photos_page.tsx # Photo gallery page
+│       ├── not-found.tsx       # 404 error page
+│       └── globals.css         # Global styles
+├── public/
+│   └── images/                # Party photos
+└── package.json
+```
 
-## Deploy on Vercel
+## 🎨 Customization
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. **Photos**: Add your photos to the `public/images/` directory
+2. **Colors**: Modify the gradient colors in `globals.css`
+3. **Sounds**: Update sound URLs in the sound configuration
+4. **Party Details**: Update date, time, and location in `page.tsx`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🌐 Deployment
+
+The site is optimized for deployment on Vercel:
+
+1. Push your code to GitHub
+2. Import your repository on Vercel
+3. Deploy with one click
+
+## 📱 Mobile Support
+
+- Fully responsive design
+- Touch-friendly interactions
+- Optimized for mobile viewing
+- Native time picker support
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- [Next.js](https://nextjs.org/) for the amazing framework
+- [Tailwind CSS](https://tailwindcss.com/) for the utility-first CSS
+- [Framer Motion](https://www.framer.com/motion/) for the animations
+- [Howler.js](https://howlerjs.com/) for the sound effects
+- [canvas-confetti](https://www.kirilv.com/canvas-confetti/) for the confetti effects

@@ -9,6 +9,7 @@ import { Howl } from "howler";
 import confetti from "canvas-confetti";
 import "./globals.css";
 import { ChangeEvent, FormEvent } from "react";
+import Link from "next/link";
 
 // Extend Window interface to include our sound properties
 declare global {
@@ -71,6 +72,8 @@ export default function Home() {
   const [countdown, setCountdown] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [soundsLoaded, setSoundsLoaded] = useState(false);
+  const [photoScale, setPhotoScale] = useState(1);
+  const [lastClickTime, setLastClickTime] = useState(Date.now());
 
   // Initialize sound effects
   useEffect(() => {
@@ -196,7 +199,35 @@ export default function Home() {
     createSparkles();
   };
 
-  const handleClick = (event: React.MouseEvent) => {
+  // Handle photo scaling
+  useEffect(() => {
+    const checkAndResetScale = () => {
+      const now = Date.now();
+      const timeSinceLastClick = now - lastClickTime;
+      
+      if (timeSinceLastClick > 3000) { // Start reset after 3 seconds of no clicks
+        const resetInterval = setInterval(() => {
+          setPhotoScale(prevScale => {
+            if (prevScale <= 1) {
+              clearInterval(resetInterval);
+              return 1;
+            }
+            return Math.max(1, prevScale - 0.05); // Decrease by 0.05 every 100ms
+          });
+        }, 100);
+
+        return () => clearInterval(resetInterval);
+      }
+    };
+
+    const interval = setInterval(checkAndResetScale, 1000);
+    return () => clearInterval(interval);
+  }, [lastClickTime]);
+
+  const handlePhotoClick = (event: React.MouseEvent) => {
+    event.preventDefault();
+    setLastClickTime(Date.now());
+    setPhotoScale(prevScale => Math.min(prevScale + 0.2, 2.5)); // Max scale of 2.5
     playClickSound();
     createMiniConfetti(event);
   };
@@ -224,23 +255,72 @@ export default function Home() {
         >
           ⏳ Countdown: {countdown}
         </motion.h2>
-        <motion.img 
-          src={currentPhoto} 
-          alt="Random Photo" 
-          className="w-64 h-64 rounded-full border-4 border-white/30 shadow-2xl mb-6 hover:scale-110 transition-transform duration-500"
-          animate={{ 
-            rotate: 0, 
-            scale: [1, 1.1, 1],
-            boxShadow: ["0 0 0 0 rgba(255,255,255,0.3)", "0 0 20px 10px rgba(255,255,255,0.5)", "0 0 0 0 rgba(255,255,255,0.3)"]
-          }} 
-          transition={{ 
-            duration: 3, 
-            repeat: Infinity, 
-            ease: "linear",
-            boxShadow: { duration: 2, repeat: Infinity }
-          }}
-          onMouseEnter={handleHover}
-        />
+        <motion.div
+          className="relative"
+          style={{ scale: photoScale }}
+          transition={{ duration: 0.3 }}
+        >
+          <motion.img 
+            src={currentPhoto} 
+            alt="Random Photo" 
+            className="w-64 h-64 rounded-full border-4 border-white/30 shadow-2xl mb-6 cursor-pointer"
+            animate={{ 
+              rotate: 0, 
+              scale: [1, 1.1, 1],
+              boxShadow: ["0 0 0 0 rgba(255,255,255,0.3)", "0 0 20px 10px rgba(255,255,255,0.5)", "0 0 0 0 rgba(255,255,255,0.3)"]
+            }} 
+            transition={{ 
+              duration: 3, 
+              repeat: Infinity, 
+              ease: "linear",
+              boxShadow: { duration: 2, repeat: Infinity }
+            }}
+            onMouseEnter={handleHover}
+            onClick={handlePhotoClick}
+          />
+          <motion.div
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{ duration: 0.5 }}
+          >
+            <span className="text-white text-lg font-semibold bg-black/50 px-4 py-2 rounded-full">
+              Click to make it bigger! (if you know what I mean...)
+            </span>
+          </motion.div>
+        </motion.div>
+        
+        {/* <div className="flex gap-4">
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onMouseEnter={handleHover}
+          >
+            <Link 
+              href="/pages/photos" 
+              className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-full font-semibold shadow-lg hover:bg-white/30 transition-all duration-300 border border-white/30"
+            >
+              <span className="text-2xl">📸</span>
+              View All Party Photos
+              <span className="text-2xl">✨</span>
+            </Link>
+          </motion.div>
+
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onMouseEnter={handleHover}
+          >
+            <Link 
+              href="pages/click-game" 
+              className="inline-flex items-center gap-2 bg-yellow-400 text-black px-6 py-3 rounded-full font-semibold shadow-lg hover:bg-yellow-500 transition-all duration-300 border border-yellow-500"
+            >
+              <span className="text-2xl">🏆</span>
+              Leaderboard
+              <span className="text-2xl">🔥</span>
+            </Link>
+          </motion.div>
+        </div> */}
+
         <motion.div 
           className="w-full max-w-lg bg-white/90 backdrop-blur-sm text-black rounded-2xl p-8 shadow-2xl border border-white/20"
           initial={{ opacity: 0, scale: 0.9, y: 20 }} 
@@ -289,7 +369,7 @@ export default function Home() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onMouseEnter={handleHover}
-                    onClick={handleClick}
+                    onClick={handlePhotoClick}
                   >
                     <input 
                       type="radio" 
@@ -314,7 +394,7 @@ export default function Home() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onMouseEnter={handleHover}
-                    onClick={handleClick}
+                    onClick={handlePhotoClick}
                   >
                     <input 
                       type="checkbox" 
@@ -372,7 +452,7 @@ export default function Home() {
               }}
               whileTap={{ scale: 0.98 }}
               onMouseEnter={handleHover}
-              onClick={handleClick}
+              onClick={handlePhotoClick}
             >
               Submit RSVP
             </motion.button>
@@ -396,7 +476,7 @@ export default function Home() {
                 textShadow: "0 0 8px rgba(147,51,234,0.3)"
               }}
               onMouseEnter={handleHover}
-              onClick={handleClick}
+              onClick={handlePhotoClick}
             >
               <a 
                 href="https://maps.app.goo.gl/vUcwL9DXNeLvsvht6" 
@@ -413,7 +493,7 @@ export default function Home() {
                 textShadow: "0 0 8px rgba(147,51,234,0.3)"
               }}
               onMouseEnter={handleHover}
-              onClick={handleClick}
+              onClick={handlePhotoClick}
             >
               <a 
                 href="https://open.spotify.com/playlist/0O7BRkw348UB22qorXSAO3?si=fsUdkQ8vQBacuA-w7OMI_w&pt=6ef8266ae4768c74c4566ca1241f9627&pi=54BSKKneQtazn" 
@@ -430,24 +510,7 @@ export default function Home() {
                 textShadow: "0 0 8px rgba(147,51,234,0.3)"
               }}
               onMouseEnter={handleHover}
-              onClick={handleClick}
-            >
-              <a 
-                href="https://drive.google.com/drive/folders/1e2No5NzSNcy24GuHfvMV4f25-tmG52V6?usp=sharing" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-purple-600 hover:text-purple-800 transition-colors"
-              >
-                📸 Party Photos
-              </a>
-            </motion.li>
-            <motion.li 
-              whileHover={{ 
-                scale: 1.02,
-                textShadow: "0 0 8px rgba(147,51,234,0.3)"
-              }}
-              onMouseEnter={handleHover}
-              onClick={handleClick}
+              onClick={handlePhotoClick}
             >
               <a 
                 href="https://t.me/+mrxjhlZATLBiZDAy" 
@@ -464,7 +527,7 @@ export default function Home() {
                 textShadow: "0 0 8px rgba(147,51,234,0.3)"
               }}
               onMouseEnter={handleHover}
-              onClick={handleClick}
+              onClick={handlePhotoClick}
             >
               <a 
                 href="https://docs.google.com/spreadsheets/d/1jV6Q_1kVZw27qNA0AMKgdsQcfdMZXWd5y5BbxB27K7A/edit?gid=0#gid=0" 
