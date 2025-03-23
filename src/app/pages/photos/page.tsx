@@ -154,7 +154,7 @@ export default function PhotosPage() {
           Party Photos Gallery
         </motion.h1>
 
-        {/* Tinder-like Swipe Interface */}
+        {/* Tinder-like Swipe Interface
         <div className="relative h-[500px] mb-12 flex items-center justify-center">
           {photos.map((photo, index) => (
             <div
@@ -189,7 +189,7 @@ export default function PhotosPage() {
               </TinderCard>
             </div>
           ))}
-        </div>
+        </div> */}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {photos.map((photo, index) => (

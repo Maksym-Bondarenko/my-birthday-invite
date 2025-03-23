@@ -289,7 +289,7 @@ export default function Home() {
           </motion.div>
         </motion.div>
         
-        {/* <div className="flex gap-4">
+        <div className="flex gap-4">
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -311,7 +311,7 @@ export default function Home() {
             onMouseEnter={handleHover}
           >
             <Link 
-              href="pages/click-game" 
+              href="/pages/click-game" 
               className="inline-flex items-center gap-2 bg-yellow-400 text-black px-6 py-3 rounded-full font-semibold shadow-lg hover:bg-yellow-500 transition-all duration-300 border border-yellow-500"
             >
               <span className="text-2xl">🏆</span>
@@ -319,7 +319,7 @@ export default function Home() {
               <span className="text-2xl">🔥</span>
             </Link>
           </motion.div>
-        </div> */}
+        </div>
 
         <motion.div 
           className="w-full max-w-lg bg-white/90 backdrop-blur-sm text-black rounded-2xl p-8 shadow-2xl border border-white/20"
@@ -452,7 +452,6 @@ export default function Home() {
               }}
               whileTap={{ scale: 0.98 }}
               onMouseEnter={handleHover}
-              onClick={handlePhotoClick}
             >
               Submit RSVP
             </motion.button>

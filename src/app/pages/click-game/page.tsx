@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import "../../globals.css";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, query, orderBy, onSnapshot, setDoc, doc } from "firebase/firestore";
 
 export default function ClickGame() {
   const [nickname, setNickname] = useState("");
@@ -12,36 +13,37 @@ export default function ClickGame() {
   const [leaderboard, setLeaderboard] = useState<{ name: string; score: number }[]>([]);
   const [gameStarted, setGameStarted] = useState(false);
 
-  // Load leaderboard from localStorage on mount
   useEffect(() => {
-    const savedLeaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
-    setLeaderboard(savedLeaderboard);
+    // Listen to Firestore updates in real-time
+    const q = query(collection(db, "leaderboard"), orderBy("score", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const leaderboardData = snapshot.docs.map(doc => ({ name: doc.id, score: doc.data().score }));
+      setLeaderboard(leaderboardData);
+    });
+    return () => unsubscribe();
   }, []);
 
-  const startGame = () => {
+  const startGame = async () => {
     if (!nickname.trim()) return;
     setGameStarted(true);
-    const savedClicks = localStorage.getItem(`clicks_${nickname}`);
-    setClicks(savedClicks ? parseInt(savedClicks) : 0);
+    
+    // Fetch existing score from Firestore
+    const existingUser = leaderboard.find(entry => entry.name === nickname);
+    setClicks(existingUser ? existingUser.score : 0);
   };
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (!gameStarted) return;
     const newClicks = clicks + 1;
     setClicks(newClicks);
-    localStorage.setItem(`clicks_${nickname}`, newClicks.toString());
 
     // Fire confetti effect every 10 clicks
     if (newClicks % 10 === 0) {
       confetti({ particleCount: 100, spread: 50 });
     }
 
-    // Update leaderboard
-    const updatedLeaderboard = [...leaderboard.filter((entry) => entry.name !== nickname), { name: nickname, score: newClicks }].sort(
-      (a, b) => b.score - a.score
-    );
-    setLeaderboard(updatedLeaderboard);
-    localStorage.setItem("leaderboard", JSON.stringify(updatedLeaderboard));
+    // Save or update user score in Firestore
+    await setDoc(doc(db, "leaderboard", nickname), { score: newClicks });
   };
 
   return (
@@ -54,7 +56,7 @@ export default function ClickGame() {
       >
         🎂 Birthday Click Challenge! 🎉
       </motion.h1>
-      
+
       {!gameStarted ? (
         <div className="flex flex-col items-center">
           <input
@@ -103,9 +105,6 @@ export default function ClickGame() {
       <div className="mt-6 flex gap-4">
         <Link href="/" className="bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-blue-600 transition-all">
           🔙 Back to Main Page
-        </Link>
-        <Link href="/pages/photos_page" className="bg-yellow-400 text-black px-4 py-2 rounded-lg shadow-lg hover:bg-yellow-500 transition-all">
-          📸 View Party Photos
         </Link>
       </div>
     </div>
